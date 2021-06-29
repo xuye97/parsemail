@@ -327,11 +327,29 @@ func decodeEmbeddedFile(part *multipart.Part) (ef EmbeddedFile, err error) {
 }
 
 func isAttachment(part *multipart.Part) bool {
-	return part.FileName() != ""
+	if part.FileName() != "" {
+		return true
+	}
+	//有些附件的名字放在Content-Type中叫name
+	//Content-Type: image/jpeg;
+	//	name="B109E9BF@246F4F30.AD94D960.jpg"
+	v := part.Header.Get("Content-Type")
+	_, ctMap, _ := mime.ParseMediaType(v)
+
+	return ctMap["name"] != ""
 }
 
 func decodeAttachment(part *multipart.Part) (at Attachment, err error) {
-	filename := decodeMimeSentence(part.FileName())
+	fname := ""
+	if part.FileName() != "" {
+		fname = part.FileName()
+	} else {
+		v := part.Header.Get("Content-Type")
+		_, ctMap, _ := mime.ParseMediaType(v)
+
+		fname = ctMap["name"]
+	}
+	filename := decodeMimeSentence(fname)
 	decoded, err := decodeContent(part, part.Header.Get("Content-Transfer-Encoding"))
 	if err != nil {
 		return
@@ -483,7 +501,7 @@ type Email struct {
 	ResentMessageID string
 
 	ContentType string
-	Content io.Reader
+	Content     io.Reader
 
 	HTMLBody string
 	TextBody string
