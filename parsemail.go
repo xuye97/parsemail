@@ -326,8 +326,17 @@ func decodeEmbeddedFile(part *multipart.Part) (ef EmbeddedFile, err error) {
 	return
 }
 
+func FileName(part *multipart.Part) string {
+	v := part.Header.Get("Content-Disposition")
+	_, params, err := mime.ParseMediaType(v)
+	if err != nil {
+		panic(err)
+	}
+	return params["filename"]
+}
+
 func isAttachment(part *multipart.Part) bool {
-	if part.FileName() != "" {
+	if FileName(part) != "" {
 		return true
 	}
 	//有些附件的名字放在Content-Type中叫name
@@ -340,10 +349,8 @@ func isAttachment(part *multipart.Part) bool {
 }
 
 func decodeAttachment(part *multipart.Part) (at Attachment, err error) {
-	fname := ""
-	if part.FileName() != "" {
-		fname = part.FileName()
-	} else {
+	fname := FileName(part)
+	if fname == "" {
 		v := part.Header.Get("Content-Type")
 		_, ctMap, _ := mime.ParseMediaType(v)
 
